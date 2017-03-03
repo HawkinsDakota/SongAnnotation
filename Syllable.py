@@ -1,4 +1,5 @@
 from SoundObject import SoundObject
+import matplotlib.pyplot as plt
 
 class Syllable(SoundObject):
 
@@ -14,6 +15,14 @@ class Syllable(SoundObject):
         '''.format(self.species, self.label)
         return(out)
 
+    def plot_spectrogram(self, show):
+        super(Syllable, self).plot_spectrogram(False)
+        plot_title = '%s from [%0.2f - %0.2f] in %s' % (self.label,
+          self.start, self.end, self.species)
+        plt.title(plot_title)
+        if show:
+            plt.show()
+
 if __name__ == '__main__':
     test = Syllable(start = 11.844455261385376,
                     end = 12.081455063757392,
@@ -22,4 +31,4 @@ if __name__ == '__main__':
                     label = 'CATH_yea')
 
     print(test)
-    test.plot_spectrogram()
+    test.plot_spectrogram(True)
