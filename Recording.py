@@ -71,10 +71,16 @@ class Recording(object):
                     elif keep_background:
                         self.new_background(start, end)
 
+    def list_syllables(self):
+        label_list = ['']*self.num_syllables
+        for i in range(self.num_syllables):
+            label_list[i] = self.syllables[i].label
+        return(label_list)
+
 if __name__ == "__main__":
-    recording_test = Recording('Downloads/CATH1.WAV', 'Downloads/CATH1.TextGrid', 'CATH1')
+    recording_test = Recording('Downloads/CATH1.wav', 'Downloads/CATH1.TextGrid', 'CATH1')
     print(recording_test)
     recording_test.get_annotations(False)
     print(recording_test)
-    for i in range(5):
-        recording_test.syllables[i].plot_spectrogram()
+    for i in range(10,13):
+        recording_test.syllables[i].plot_spectrogram(True)
