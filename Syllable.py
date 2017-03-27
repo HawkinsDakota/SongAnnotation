@@ -31,4 +31,5 @@ if __name__ == '__main__':
                     label = 'CATH_yea')
 
     print(test)
+    print(isinstance(test, Syllable))
     test.plot_spectrogram(True)
