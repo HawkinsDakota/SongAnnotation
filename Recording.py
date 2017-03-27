@@ -1,17 +1,24 @@
 import re
 from Syllable import Syllable
+from SyllableCollection import SyllableCollection
+from Song import Song
 from progressbar import ProgressBar, UnknownLength
-
 
 class Recording(object):
 
-    def __init__(self, sound_file, grid_file, species = 'Unassigned'):
+    def __init__(self, sound_file, grid_file, species = 'Unassigned',
+      preprocess = True, fmin = 0, fmax = None):
         self.__check_inputs(sound_file, grid_file, species)
+        self.preprocess = preprocess
+        self.fmin = fmin
+        self.fmax = fmax
         self.sound_file = sound_file
         self.grid_file = grid_file
         self.species = species
-        self.syllables = []
+        self.syllables = SyllableCollection()
         self.num_syllables = 0
+        self.songs = []
+        self.num_songs = 0
         self.background = []
         self.num_background = 0
 
@@ -21,9 +28,10 @@ class Recording(object):
               Audio file: %s
               TextGrid file: %s
               Number of syllables: %i
+              Number of songs: %i
               Total number of annotations: %i
               ''' % (self.species, self.sound_file,
-                     self.grid_file, self.num_syllables,
+                     self.grid_file, self.num_syllables, self.num_songs,
                      self.num_syllables + self.num_background)
         return(out)
 
@@ -40,7 +48,7 @@ class Recording(object):
 
     def new_syllable(self, start, end, label):
         new_syllable = Syllable(start, end, self.sound_file, self.species, label)
-        self.syllables.append(new_syllable)
+        self.syllables.add_syllable(new_syllable)
         self.num_syllables += 1
 
     def new_background(self, start, end):
@@ -56,6 +64,7 @@ class Recording(object):
         with open(self.grid_file) as read_file:
             print('Parsing .TextGrid and Audio files.')
             bar = ProgressBar(max_value = UnknownLength)
+            song_start = 0
             for i, line in enumerate(read_file):
                 bar.update(i)
                 if re.search('intervals \[[0-9]*\]', line) != None:
@@ -68,8 +77,39 @@ class Recording(object):
                     if label != '':
                         label = self.species + '_' + label
                         self.new_syllable(start, end, label)
+                        current_syllable = self.syllables[self.num_syllables - 1]
+                        past_syllable = self.syllables[self.num_syllables - 2]
+                        if (self.num_syllables > 1 and current_syllable.end - past_syllable.start > 1):
+                            self.add_song(self.syllables[song_start:(self.num_syllables - 1)],
+                                          self.syllables[song_start].start,
+                                          current_syllable.end,
+                                          self.sound_file,
+                                          self.preprocess,
+                                          self.fmin,
+                                          self.fmax)
+                            song_start = self.num_syllables
                     elif keep_background:
                         self.new_background(start, end)
+            self.add_song(self.syllables[song_start:(self.num_syllables - 1)],
+                          self.syllables[song_start].start,
+                          self.syllables[self.num_syllables - 1].end,
+                          self.sound_file,
+                          self.preprocess,
+                          self.fmin,
+                          self.fmax)
+
+    def add_song(self, song_syllables, song_start, song_end, sound_file,
+      preprocess, fmin, fmax):
+        self.songs.append(Song(
+           song_syllables,
+           song_start,
+           song_end,
+           self.sound_file,
+           self.preprocess,
+           self.fmin,
+           self.fmax))
+        self.num_songs += 1
+
 
     def list_syllables(self):
         label_list = ['']*self.num_syllables
@@ -82,5 +122,6 @@ if __name__ == "__main__":
     print(recording_test)
     recording_test.get_annotations(False)
     print(recording_test)
-    for i in range(10,13):
-        recording_test.syllables[i].plot_spectrogram(True)
+    for i in range(26):
+        print(recording_test.syllables[i].start,
+          recording_test.syllables[i].end)
