@@ -59,15 +59,14 @@ class SyllableCollection(object):
         end_list = [each.start for each in self.syllables]
         return(end_list)
 
+    def get_unique_syllables(self):
+        return(list(set(self.get_labels())))
+
 if __name__ == '__main__':
     from Recording import Recording
-    recording_test = Recording('Downloads/CATH1.wav', 'Downloads/CATH1.TextGrid', 'CATH1')
+    recording_test = Recording('Downloads/CATH1.wav',
+                               'Downloads/CATH1.TextGrid', 'CATH1')
     print(recording_test)
-    recording_test.get_annotations(False)
+    recording_test.get_annotations(keep_background=False, keep_songs=False)
     print(recording_test)
-    b = SyllableCollection(recording_test.syllables[1:5])
-    b.add_syllable(recording_test.syllables[6])
-    print(b.num_syllables)
-    print(b.get_labels())
-    print(b.get_start_times())
-    print(b.get_end_times())
+    print(len(recording_test.syllables.get_unique_syllables()))
