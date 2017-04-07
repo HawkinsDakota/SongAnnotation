@@ -16,7 +16,7 @@ class Recording(object):
         self.grid_file = grid_file
         self.species = species
         self.syllables = SyllableCollection()
-        self.num_syllables = 0
+        self.n_syllables = 0
         self.songs = []
         self.num_songs = 0
         self.background = []
@@ -31,8 +31,8 @@ class Recording(object):
               Number of songs: %i
               Total number of annotations: %i
               ''' % (self.species, self.sound_file,
-                     self.grid_file, self.num_syllables, self.num_songs,
-                     self.num_syllables + self.num_background)
+                     self.grid_file, self.n_syllables, self.num_songs,
+                     self.n_syllables + self.num_background)
         return(out)
 
     def __check_inputs(self, sound_file, grid_file, species):
@@ -50,7 +50,7 @@ class Recording(object):
         new_syllable = Syllable(start, end, self.sound_file,
                                 self.species, label)
         self.syllables.add_syllable(new_syllable)
-        self.num_syllables += 1
+        self.n_syllables += 1
 
     def new_background(self, start, end):
         new_background = Syllable(start, end, self.sound_file,
@@ -79,25 +79,25 @@ class Recording(object):
                     if label != '':
                         label = self.species + '_' + label
                         self.new_syllable(start, end, label)
-                        current_syllable = self.syllables[self.num_syllables - 1]
-                        past_syllable = self.syllables[self.num_syllables - 2]
+                        current_syllable = self.syllables[self.n_syllables - 1]
+                        past_syllable = self.syllables[self.n_syllables - 2]
                         if keep_songs:
                             # @ToDo: write a method for this instead
-                            if (self.num_syllables > 1 and (current_syllable.end - past_syllable.start > 1)):
-                                self.add_song(self.syllables[song_start:(self.num_syllables - 1)],
+                            if (self.n_syllables > 1 and (current_syllable.end - past_syllable.start > 1)):
+                                self.add_song(self.syllables[song_start:(self.n_syllables - 1)],
                                               self.syllables[song_start].start,
                                               current_syllable.end,
                                               self.sound_file,
                                               self.preprocess,
                                               self.fmin,
                                               self.fmax)
-                                song_start = self.num_syllables
+                                song_start = self.n_syllables
                     elif keep_background:
                         self.new_background(start, end)
             if keep_songs:
-                self.add_song(self.syllables[song_start:(self.num_syllables - 1)],
+                self.add_song(self.syllables[song_start:(self.n_syllables - 1)],
                               self.syllables[song_start].start,
-                              self.syllables[self.num_syllables - 1].end,
+                              self.syllables[self.n_syllables - 1].end,
                               self.sound_file,
                               self.preprocess,
                               self.fmin,
