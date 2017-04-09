@@ -79,29 +79,28 @@ class Recording(object):
                     if label != '':
                         label = self.species + '_' + label
                         self.new_syllable(start, end, label)
-                        current_syllable = self.syllables[self.n_syllables - 1]
-                        past_syllable = self.syllables[self.n_syllables - 2]
-                        if keep_songs:
-                            # @ToDo: write a method for this instead
-                            if (self.n_syllables > 1 and (current_syllable.end - past_syllable.start > 1)):
-                                self.add_song(self.syllables[song_start:(self.n_syllables - 1)],
-                                              self.syllables[song_start].start,
-                                              current_syllable.end,
-                                              self.sound_file,
-                                              self.preprocess,
-                                              self.fmin,
-                                              self.fmax)
-                                song_start = self.n_syllables
-                    elif keep_background:
-                        self.new_background(start, end)
-            if keep_songs:
-                self.add_song(self.syllables[song_start:(self.n_syllables - 1)],
-                              self.syllables[song_start].start,
-                              self.syllables[self.n_syllables - 1].end,
-                              self.sound_file,
-                              self.preprocess,
-                              self.fmin,
-                              self.fmax)
+                        # if keep_songs:
+                        #     current_syllable = self.syllables[self.n_syllables - 1]
+                        #     past_syllable = self.syllables[self.n_syllables - 2]
+                        #     if (self.n_syllables > 1 and (current_syllable.end - past_syllable.start > 1)):
+                        #         self.add_song(self.syllables[song_start:(self.n_syllables - 1)],
+                        #                       self.syllables[song_start].start,
+                        #                       current_syllable.end,
+                        #                       self.sound_file,
+                        #                       self.preprocess,
+                        #                       self.fmin,
+                        #                       self.fmax)
+                        #         song_start = self.n_syllables
+                    # elif keep_background:
+                    #     self.new_background(start, end)
+            # if keep_songs:
+            #     self.add_song(self.syllables[song_start:(self.n_syllables - 1)],
+            #                   self.syllables[song_start].start,
+            #                   self.syllables[self.n_syllables - 1].end,
+            #                   self.sound_file,
+            #                   self.preprocess,
+            #                   self.fmin,
+            #                   self.fmax)
 
     def add_song(self, song_syllables, song_start, song_end, sound_file,
                  preprocess, fmin, fmax):
@@ -116,10 +115,21 @@ class Recording(object):
     def unique_syllable_labels(self):
         return(self.syllables.get_unique_syllables())
 
+    def check_for_unique_syllables(self):
+        same_syllables = []
+        for i, each in enumerate(self.syllables.to_list()):
+            for j in range(i+1, len(self.syllables.to_list())):
+                if self.syllables[i] == self.syllables[j]:
+                    same_syllables.append(self.syllables)
+        return(len(same_syllables) > 0 )
+
+
 if __name__ == "__main__":
-    recording_test = Recording('Downloads/CATH1.wav',
-                               'Downloads/CATH1.TextGrid',
-                               'CATH1')
+    recording_test = Recording('Downloads/CATH2.wav',
+                               'TestData/CATH2.TextGrid',
+                               'CATH')
+    # 24 entries
     recording_test.get_annotations(keep_background=False)
     print(recording_test)
     print(len(recording_test.unique_syllable_labels()))
+    print(record_test.check_for_unique_syllables())
