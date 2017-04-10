@@ -30,6 +30,12 @@ class SoundObject(object):
         Duration: %0.2f''' % (self.start, self.end, self.duration,)
         return(out)
 
+    def __eq__(self, other):
+        start_eq = self.start == other.start
+        end_eq = self.end == other.end
+        sound_eq = self.sound_file == other.sound_file
+        return(all([start_eq, end_eq, sound_eq]))
+
     def __check_inputs(self, start, end, sound_file):
         if type(start) != int and type(start) != float:
             raise IOError('Expected numeric value for start time.')
@@ -94,19 +100,19 @@ if __name__ == '__main__':
                        preprocess=True)
     test.plot_spectrogram(True)
 
-    # process_test = SoundObject(start = 11.844455261385376,
-    #                            end = 12.081455063757392,
-    #                            sound_file = 'Downloads/CATH1.WAV',
-    #                            preprocess = False)
-    # test.plot_spectrogram(True)
+    process_test = SoundObject(start=11.844455261385376,
+                               end=12.081455063757392,
+                               sound_file='Downloads/CATH1.WAV',
+                               preprocess=False)
+    #print(test == process_test)
 
-    # big_test = SoundObject(start = 13,
-    #                        end = 20,
-    #                        sound_file = 'Downloads/CATH1.WAV',
-    #                        preprocess = True,
-    #                        fmin = 1000,
-    #                        fmax = 10000)
-    # big_test.plot_spectrogram(True)
+    big_test = SoundObject(start = 13,
+                           end = 20,
+                           sound_file = 'Downloads/CATH1.WAV',
+                           preprocess = True,
+                           fmin = 1000,
+                           fmax = 10000)
+    #print(test == big_test)
     #
     # big_test_preprocess = SoundObject(start = 13,
     #                                   end = 20,
