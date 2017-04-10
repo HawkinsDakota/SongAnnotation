@@ -15,7 +15,8 @@ class Recording(object):
         self.sound_file = sound_file
         self.grid_file = grid_file
         self.species = species
-        self.syllables = SyllableCollection()
+        # must specifically instantiate syllables as empty -- for some reason
+        self.syllables = SyllableCollection([])
         self.n_syllables = 0
         self.songs = []
         self.num_songs = 0
@@ -24,12 +25,12 @@ class Recording(object):
 
     def __str__(self):
         out = '''
-              Species: %s
-              Audio file: %s
-              TextGrid file: %s
-              Number of syllables: %i
-              Number of songs: %i
-              Total number of annotations: %i
+Species: %s
+Audio file: %s
+TextGrid file: %s
+Number of syllables: %i
+Number of songs: %i
+Total number of annotations: %i
               ''' % (self.species, self.sound_file,
                      self.grid_file, self.n_syllables, self.num_songs,
                      self.n_syllables + self.num_background)
@@ -49,8 +50,9 @@ class Recording(object):
     def new_syllable(self, start, end, label):
         new_syllable = Syllable(start, end, self.sound_file,
                                 self.species, label)
-        self.syllables.add_syllable(new_syllable)
-        self.n_syllables += 1
+        if new_syllable not in self.syllables.to_list():
+            self.syllables.add_syllable(new_syllable)
+            self.n_syllables += 1
 
     def new_background(self, start, end):
         new_background = Syllable(start, end, self.sound_file,
@@ -62,23 +64,47 @@ class Recording(object):
         '''
         Parses a .TextGrid file for syllable annotations
         '''
-        with open(self.grid_file) as read_file:
-            print('Parsing %s and %s' % (self.grid_file, self.sound_file))
-            bar = ProgressBar(max_value=UnknownLength)
-            song_start = 0
-            for i, line in enumerate(read_file):
-                bar.update(i)
-                if re.search('intervals \[[0-9]*\]', line) is not None:
-                    start_line = read_file.readline().strip()
-                    end_line = read_file.readline().strip()
-                    label_line = read_file.readline().strip()
-                    start = float(start_line.split('=')[1])
-                    end = float(end_line.split('=')[1])
-                    label = re.sub(r'^"|"$', '',
-                                   label_line.split('=')[1].strip())
-                    if label != '':
-                        label = self.species + '_' + label
-                        self.new_syllable(start, end, label)
+        read_file = open(self.grid_file, 'r')
+        lines = read_file.readlines()
+        read_file.close()
+        n_lines = len(lines)
+        current_line = 0
+        bar = ProgressBar(max_value=len(lines))
+        while current_line < n_lines:
+            bar.update(current_line + 1)
+            line = lines[current_line]
+            if re.search('intervals \[[0-9]*\]', line) is not None:
+                start_line = lines[current_line + 1].strip()
+                end_line = lines[current_line + 2].strip()
+                label_line = lines[current_line + 3].strip()
+                start = float(start_line.split('=')[1])
+                end = float(end_line.split('=')[1])
+                label = re.sub(r'^"|"$', '',
+                               label_line.split('=')[1].strip())
+                if label != '':
+                    label = self.species + '_' + label
+                    self.new_syllable(start, end, label)
+                current_line += 4
+            else:
+                current_line += 1
+
+        # with open(self.grid_file) as read_file:
+        #     print('Parsing %s and %s' % (self.grid_file, self.sound_file))
+        #     bar = ProgressBar(max_value=UnknownLength)
+        #     song_start = 0
+        #     for i, line in enumerate(read_file):
+        #         bar.update(i)
+        #         if re.search('intervals \[[0-9]*\]', line) is not None:
+        #             start_line = read_file.readline().strip()
+        #             end_line = read_file.readline().strip()
+        #             label_line = read_file.readline().strip()
+        #             start = float(start_line.split('=')[1])
+        #             end = float(end_line.split('=')[1])
+        #             label = re.sub(r'^"|"$', '',
+        #                            label_line.split('=')[1].strip())
+        #             if label != '':
+        #                 label = self.species + '_' + label
+        #                 self.new_syllable(start, end, label)
                         # if keep_songs:
                         #     current_syllable = self.syllables[self.n_syllables - 1]
                         #     past_syllable = self.syllables[self.n_syllables - 2]
@@ -118,10 +144,10 @@ class Recording(object):
     def check_for_unique_syllables(self):
         same_syllables = []
         for i, each in enumerate(self.syllables.to_list()):
-            for j in range(i+1, len(self.syllables.to_list())):
+            for j in range(i+1, len(self.syllables.to_list()) - 1):
                 if self.syllables[i] == self.syllables[j]:
                     same_syllables.append(self.syllables)
-        return(len(same_syllables) > 0 )
+        return(len(same_syllables) == 0 )
 
 
 if __name__ == "__main__":
@@ -132,4 +158,4 @@ if __name__ == "__main__":
     recording_test.get_annotations(keep_background=False)
     print(recording_test)
     print(len(recording_test.unique_syllable_labels()))
-    print(record_test.check_for_unique_syllables())
+    print(recording_test.check_for_unique_syllables())
