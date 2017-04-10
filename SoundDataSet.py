@@ -1,18 +1,34 @@
 from Recording import Recording
 import glob
+from SyllableCollection import SyllableCollection
 import re
 import os
+import pickle
+from numpy import random
+
 
 class SoundDataSet(object):
 
     def __init__(self, data_directory, species='Unassigned', preprocess=True,
                  fmin=0, fmax=None):
-        self.wav_to_grid = match_wav_with_textgrid(data_directory)
-        self.syllables, self.unique_syllables = self.__load_syllables(
-            species, preprocess, fmin, fmax)
-        self.n_syllables = len(self.syllables)
+        # provided instance variables
+        self.species = species
+        self.__preprocess = preprocess
+        self.__fmin = fmin
+        self.__fmax = fmax
 
-    def match_wav_with_textgrid(data_directory):
+        # calculated instance variables
+        self.wav_to_grid = self.match_wav_with_textgrid(data_directory)
+        # must specifically instantiate syllables as empty -- for some reason
+        self.syllables = SyllableCollection([])
+        self.syllable_labels = []
+        self.unique_syllables = []
+        self.n_syllables = 0
+
+    def __len__(self):
+        return(len(self.syllables))
+
+    def match_wav_with_textgrid(self, data_directory):
         wav_files = [wav for wav in glob.glob(data_directory + '/*.wav')]
         grid_files = [grid for grid in glob.glob(data_directory +
                                                  '/*.TextGrid')]
@@ -45,21 +61,56 @@ class SoundDataSet(object):
         else:
             raise IOError('%s file does not exist.' % grid_file)
 
-    def __load_syllables(self, species, preprocess, fmin, fmax):
-        syllables = []
-        unique_syllables = set()
+    def load_syllables(self, save_file=None):
         for wav in self.wav_to_grid:
+            print('Loading annotations from: {0}'.format(wav))
             new_recording = (Recording(sound_file=wav,
                                        grid_file=self.wav_to_grid[wav],
-                                       species=species,
-                                       preprocess=preprocess,
-                                       fmin=fmin,
-                                       fmax=fmax))
-            new_recording.get_annotations()
-            syllables += new_recording.syllables
-            unique_syllables.union(new_recording.list_syllables())
-        return(syllables, list(unique_syllables))
+                                       species=self.species,
+                                       preprocess=self.__preprocess,
+                                       fmin=self.__fmin,
+                                       fmax=self.__fmax))
+            new_recording.get_annotations(keep_background=False,
+                                          keep_songs=False)
+            self.syllables = self.syllables.combine_collections(new_recording.syllables)
+            self.syllable_labels += new_recording.syllable_lables()
+        self.unique_syllables = list(set(self.syllable_labels))
+        self.n_syllables = len(self.syllables)
+        if save_file is not None:
+            self.save_dataset(save_file)
 
-    def _create_training_and_test(fold=10):
+    def save_dataset(self, save_file):
+        with open(save_file, 'wb') as output:
+            pickle.dump(self, output, pickle.HIGHEST_PROTOCOL)
 
-        return (None)
+    def load_dataset(self, read_file):
+        with open(read_file, 'rb') as pickle_input:
+            self = pickle.load(pickle_input)
+
+    def create_training_and_test(self, fold=10):
+        test_size = int(len(self.syllables)/fold)
+        all_indices = range(self.n_syllables)
+        test_indices = random.choice(all_indices, size=test_size, replace=False)
+        training_indices = list(set(all_indices).difference(test_indices))
+        test_samples = self.syllables[list(test_indices)]
+        training_samples = self.syllables[list(training_indices)]
+        return(training_samples, test_samples)
+
+    def syllable_to_index(self):
+        syllable_index = {}
+        for i, each in enumerate(self.unique_syllables):
+            syllable_index[i] = each
+            syllable_index[each] = i
+        return(syllable_index)
+
+if __name__ == '__main__':
+    test = SoundDataSet('TestData')
+    test.load_syllables(save_file='TestData/test_set.pkl')
+    # r1 = Recording('TestData/CATH1.wav',
+    #                'TestData/CATH1.TextGrid', species='CATH')
+    # r1.get_annotations()
+    # print(r1.check_for_unique_syllables())
+    #r2 = Recording('TestData/CATH2.wav',
+    #                  'TestData/CATH2.TextGrid', species='CATH')
+    #r2.get_annotations()
+    #print(r2.check_for_unique_syllables())
