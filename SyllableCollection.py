@@ -13,22 +13,31 @@ class SyllableCollection(object):
             out_str += str(each)
         return(out_str)
 
-    def __add__(self, other):
-        if isinstance(other, SyllableCollection):
-            return(SyllableCollection(self.syllables + other.syllables))
-        else:
-            raise TypeError('Cannot concatenate \
-            SyllableCollection with %s' % type(other))
-
-    def __iadd__(self, other):
-        if isinstance(other, SyllableCollection):
-            self.syllables = self.syllables + other.syllables
-            self.n_syllables = len(self.syllables)
-            return(self)
-        else:
-            raise TypeError('Cannot concatenate \
-            SyllableCollection with %s' % type(other))
-
+    # def __add__(self, other):
+    #     if isinstance(other, SyllableCollection):
+    #         expected = self.n_syllables + other.n_syllables
+    #         new = SyllableCollection(self.syllables + other.syllables)
+    #         if len(new) != expected:
+    #             self.__raise_concatentation_error(len(new), expected)
+    #         return(new)
+    #     else:
+    #         raise TypeError('Cannot concatenate SyllableCollection with %s' % type(other))
+    #
+    # def __radd__(self, other):
+    #     return(self.__add__(other))
+    #
+    # # BUG: double adding self then adding other
+    # def __iadd__(self, other):
+    #     if isinstance(other, SyllableCollection):
+    #         expected = self.n_syllables + other.n_syllables
+    #         self.syllables = self.syllables + other.syllables
+    #         if len(self.syllables) != expected:
+    #             self.__raise_concatentation_error(len(self.syllables), expected)
+    #         self.n_syllables = len(self.syllables)
+    #         return(self)
+    #     else:
+    #         raise TypeError('Cannot concatenate SyllableCollection with %s' % type(other))
+    #
     def __getitem__(self, i):
         if isinstance(i, slice):
             if i.stop >= len(self) and i.start >= len(self):
@@ -54,17 +63,39 @@ class SyllableCollection(object):
         if len(syllables) > 0 and not any([self.__check_syllable(each) for each in syllables]):
             raise TypeError('Non-syllable class contained in input list.')
 
+    @staticmethod
+    def __raise_concatentation_error(received, expected):
+        raise ValueError('Number of added syllables does not match. Expected: %d. Received: %d' % (expected, received))
+
     def __check_syllable(self, syllable):
         if not isinstance(syllable, Syllable):
             return(False)
         return(True)
 
     def add_syllable(self, new_syllable):
-        if not self.__check_syllable(new_syllable):
+        if type(new_syllable) != Syllable:
             raise TypeError('Attempting to set non-Syllable entry: %s' %
                              type(new_syllable))
         self.syllables.append(new_syllable)
         self.n_syllables += 1
+
+    def to_list(self):
+        return(self.syllables)
+
+    def syllables_of_type(self, syl_type):
+        labels = self.get_labels()
+        instances = [i for i, each in enumerate(labels) if each == syl_type]
+        return(instances)
+
+    def combine_collections(self, other):
+        if not isinstance(other, SyllableCollection):
+            raise TypeError('Cannot concatenate SyllableCollection with %s' % type(other))
+        expected = self.n_syllables + len(other)
+        self.syllables = self.syllables + other.to_list()
+        self.n_syllables = len(self.syllables)
+        if expected != self.n_syllables:
+            self.__raise_concatentation_error(self.n_syllables, expected)
+        return(self)
 
     def get_labels(self):
         label_list = [each.label for each in self.syllables]
