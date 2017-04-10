@@ -15,6 +15,14 @@ class Syllable(SoundObject):
         '''.format(self.species, self.label)
         return(out)
 
+    def __eq__(self, other):
+        if not isinstance(other, Syllable):
+            raise TypeError("Can't compare type {0} with Syllable".format(type(other)))
+        label_eq = self.label == other.label
+        species_eq = self.species == other.species
+        return(all([label_eq, species_eq, super(Syllable, self).__eq__(other)]))
+
+
     def plot_spectrogram(self, show):
         super(Syllable, self).plot_spectrogram(False)
         plot_title = '%s from [%0.2f - %0.2f] in %s' % (self.label,
