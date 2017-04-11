@@ -46,7 +46,7 @@ class SyllableLSTM(nn.Module):
     # Calculate most likely label given calculate score
     def score_to_label(self, syllable_score):
         syl_index = syllable_score.data.topk(1)
-        return(self.syl_to_idx[syl_index])
+        return(self.label_index_dict[syl_index])
 
     # Predict class of syllable spectrogram
     def predict(self, syllable):
