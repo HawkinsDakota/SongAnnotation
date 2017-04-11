@@ -13,51 +13,45 @@ torch.manual_seed(1)
 
 class SyllableLSTM(nn.Module):
 
-    def __init__(self, input_dim, possible_labels):
+    def __init__(self, input_size, possible_labels):
         super(SyllableLSTM, self).__init__()
         # input dim should be the number of mels in a syllable slice
-        self.input_dim = input_dim
+        self.input_size = input_size
         # output dim will be the number of possible labels
-        self.output_dim = len(possible_labels)
+        self.output_size = len(possible_labels)
         self.labels = possible_labels
         self.label_index_dict = self.create_label_dictionary()
-        # hidden dim will be output_dim
+        # hidden size will be output_size // possible input + output later
+        self.hidden_size = self.output_size
         self.hidden = self.init_hidden()
-        self.lstm = nn.LSTM(self.input_dim, self.output_dim)
+        self.lstm = nn.LSTMCell(self.input_size, self.output_size)
         self.loss_function = nn.NLLLoss()
         self.optimizer = optim.SGD(self.parameters(), lr=0.1)
 
     # Initialize hidden state of model, includes cell state and
     # hidden state as tuple
     def init_hidden(self):
-        return(autograd.Variable(torch.zeros(1, 1, self.output_dim)),
-               autograd.Variable(torch.zeros(1, 1, self.output_dim)))
+        return(autograd.Variable(torch.zeros(1, 1, self.hidden_size)),
+               autograd.Variable(torch.zeros(1, 1, self.hidden_size)))
 
     # Run forward pass on syllable slice over model:
     #  LSTM -> log softmax -> scores
-    def forward(self, syllable_slice):
-        lstm_out, self.hidden = self.lstm(syllable_slice, 1, -1)
-        syllable_scores = F.log_softmax(lstm_out)
-        return(syllable_scores)
-
-    # Calcuate score for a given syllable, runs over all
-    # slices of syllabe spectrogram
-    def calculate_syllable_score(self, syllable):
-        syl_spectrogram = syllable.spectrogram
-        for j in range(syl_spectrogram.shape[1]):
-            syl_slice = self.prepare_spectrogram(syl_spectrogram[ ,j])
-            label_scores = self.forward(syl_slice)
+    def forward(self, syllable):
+        syllable_tensor = self.prepare_spectrogram(syllable.spectrogram)
+        for i in range(syllable_tensor.size()[0]):
+            self.hidden = self.lstm(syllable_tensor[i], self.hidden)
+        label_scores = F.log_softmax(self.hidden[0])
         return(label_scores)
 
     # Calculate most likely label given calculate score
     def score_to_label(self, syllable_score):
-        syl_index = numpy.argmax(syllable_score.data)
+        syl_index = syllable_score.data.topk(1)
         return(self.syl_to_idx[syl_index])
 
     # Predict class of syllable spectrogram
     def predict(self, syllable):
         # Need to prepare spectogram
-        syllable_score = self.calculate_syllable_score(syllable)
+        syllable_score = self(syllable)
         return(self.score_to_label(syllable_score))
 
     def calculate_loss(self, syllable_scores, target):
@@ -71,13 +65,20 @@ class SyllableLSTM(nn.Module):
         return(syllable_index)
 
     def prepare_label(self, syl_label):
-        id_tensor = torch.zeros(1, self.output_dim)
-        id_tensor[0][self.labels_to_index[syl_label]] = 1
+        # create 'one-hot' tensor to denote syllable label
+        id_tensor = torch.zeros(1, 1, self.output_size)
+        id_tensor[0, 0, self.labels_to_index[syl_label]] = 1
         return(autograd.Variable(torch.LongTensor(id_tensor)))
 
-    def prepare_spectrogram(self, syl_spectrogram):
-        # do from numpy type thing
-        return(autograd.Variable(torch.Tensor(syl_spectrogram)))
+    def prepare_spectrogram(self, spectrogram):
+        # convert 126 x seq length spectrogram matrix to tensor
+        spec_tensor = torch.from_numpy(spectrogram)
+        # transpose because PyTorch likes input in last index and instances
+        # of input as first index
+        spec_tensor = torch.t(spec_tensor)
+        # add filler dimension for mini-batch
+        spec_tensor = torch.unsqueeze(spec_tesnor, 1)
+        return(autograd.Variable(spec_tensor))
 
     def save_model(self, save_file):
         with open(save_file, 'wb') as output:
@@ -86,7 +87,6 @@ class SyllableLSTM(nn.Module):
     def load_model(self, read_file):
         with open(read_file, 'rb') as pickle_input:
             self = pickle.load(pickle_input)
-
 
     # mabye put this outside of class
     def train_model(self, syllable_collection, n_epochs, save_file=None):
@@ -97,19 +97,16 @@ class SyllableLSTM(nn.Module):
             labels = syllable_collection.get_labels()
             s_number = 0
             for i in range(syllable_collection.n_syllables):
-                current_syl = syllable_collection.syllables[i]
-                spectrogram = current_syl.spectrogram
+                target = self.prepare_label(labels[i])
+                syllable_input = self.prepare_spectrogram(current_syl_spec)
+                current_syl_spec = syllable_collection.syllables[i].spectrogram
                 # Clear gradients and hidden state
                 self.zero_grad()
                 # Remember, hidden is tuple with both hidden state and
                 # cell state as Torch.Variables
                 self.hidden = self.init_hidden()
-
-                # Iterate over syllable slices
-                # instantiate spectrogram and
-                # target label as Torch Variables
-                target = self.prepare_label(labels[i])
-                label_scores = self.calculate_syllable_score(spectrogram)
+                # go through forward step, receive scores
+                label_scores = self(syllable_input)
                 if s_number % 500 == 0:
                     pred_label = self.score_to_label(label_scores)
                     print('Expected: {0} | Predicted: {1}'.format(
@@ -124,12 +121,3 @@ class SyllableLSTM(nn.Module):
             print('Saving model after epoch {0}.'.format(epoch))
 
     # change back to SoundDataSet
-    def create_training_and_test(self, fold=10):
-        test_size = int(len(self.sound_data.syllables)/fold)
-        all_indices = range(self.sound_data.n_syllables)
-        test_indices = random.choice(all_indices,
-                                     size=test_size, replace=False)
-        training_indices = list(set(all_indices).difference(test_indices))
-        test_samples = self.sound_data.syllables[list(test_indices)]
-        training_samples = self.sound_data.syllables[list(training_indices)]
-        return(training_samples, test_samples)
