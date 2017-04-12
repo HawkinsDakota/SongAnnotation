@@ -5,28 +5,23 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy
 
-import pickle
-
-import SoundDataSet
+from Syllable import Syllable
+from SoundDataSet import SoundDataSet
 
 torch.manual_seed(1)
 
-class SyllableLSTM(nn.Module):
+class LSTM(nn.Module):
 
-    def __init__(self, input_size, possible_labels):
+    def __init__(self, input_size, hidden_size, output_size):
         super(SyllableLSTM, self).__init__()
         # input dim should be the number of mels in a syllable slice
         self.input_size = input_size
         # output dim will be the number of possible labels
-        self.output_size = len(possible_labels)
-        self.labels = possible_labels
-        self.label_index_dict = self.create_label_dictionary()
+        self.output_size = output_size
         # hidden size will be output_size // possible input + output later
-        self.hidden_size = self.output_size
+        self.hidden_size = hidden_size
         self.hidden = self.init_hidden()
         self.lstm = nn.LSTMCell(self.input_size, self.output_size)
-        self.loss_function = nn.NLLLoss()
-        self.optimizer = optim.SGD(self.parameters(), lr=0.1)
 
     # Initialize hidden state of model, includes cell state and
     # hidden state as tuple
@@ -34,14 +29,25 @@ class SyllableLSTM(nn.Module):
         return(autograd.Variable(torch.zeros(1, 1, self.hidden_size)),
                autograd.Variable(torch.zeros(1, 1, self.hidden_size)))
 
-    # Run forward pass on syllable slice over model:
-    #  LSTM -> log softmax -> scores
-    def forward(self, syllable):
-        syllable_tensor = self.prepare_spectrogram(syllable.spectrogram)
-        for i in range(syllable_tensor.size()[0]):
-            self.hidden = self.lstm(syllable_tensor[i], self.hidden)
-        label_scores = F.log_softmax(self.hidden[0])
-        return(label_scores)
+class SyllableLSTM(object):
+
+    def __init__(self, input_size, possible_labels):
+        # input dim should be the number of mels in a syllable slice
+        self.input_size = input_size
+        # output dim will be the number of possible labels
+        self.output_size = len(possible_labels)
+        self.labels = possible_labels
+        self.label_index_dict = self.create_label_dictionary()
+        # empty syllable to place into dictionary
+        empty_syl = Syllable(start=0, end=0, species='')
+        # dictionary containg 'best' example of each syllable
+        self.best_syllables = {each: (empty_syl, 0) for each in self.labels}
+        # hidden size will be output_size // possible input + output later
+        self.loss_function = nn.NLLLoss()
+        self.optimizer = optim.SGD(self.parameters(), lr=0.1)
+        self.lstm = LSTM(input_size=self.input_size,
+                         hidden_size=self.output_size,
+                         output_size=self.output_size)
 
     # Calculate most likely label given calculate score
     def score_to_label(self, syllable_score):
@@ -51,7 +57,7 @@ class SyllableLSTM(nn.Module):
     # Predict class of syllable spectrogram
     def predict(self, syllable):
         # Need to prepare spectogram
-        syllable_score = self(syllable)
+        syllable_score = self.lstm(syllable)
         return(self.score_to_label(syllable_score))
 
     def calculate_loss(self, syllable_scores, target):
@@ -77,16 +83,14 @@ class SyllableLSTM(nn.Module):
         # of input as first index
         spec_tensor = torch.t(spec_tensor)
         # add filler dimension for mini-batch
-        spec_tensor = torch.unsqueeze(spec_tesnor, 1)
+        spectorch.unsqueeze(spec_tesnor, 1)
         return(autograd.Variable(spec_tensor))
 
     def save_model(self, save_file):
-        with open(save_file, 'wb') as output:
-            pickle.dump(self, output, pickle.HIGHEST_PROTOCOL)
+        torch.save(self.lstm.state_dict(), save_file)
 
     def load_model(self, read_file):
-        with open(read_file, 'rb') as pickle_input:
-            self = pickle.load(pickle_input)
+        self.lstm.load_state_dict(torch.load(read_file))
 
     # mabye put this outside of class
     def train_model(self, syllable_collection, n_epochs, save_file=None):
@@ -106,7 +110,7 @@ class SyllableLSTM(nn.Module):
                 # cell state as Torch.Variables
                 self.hidden = self.init_hidden()
                 # go through forward step, receive scores
-                label_scores = self(syllable_input)
+                label_scores = self.lstm(syllable_input)
                 if s_number % 500 == 0:
                     pred_label = self.score_to_label(label_scores)
                     print('Expected: {0} | Predicted: {1}'.format(
@@ -120,4 +124,18 @@ class SyllableLSTM(nn.Module):
         if save_file is not None:
             print('Saving model after epoch {0}.'.format(epoch))
 
-    # change back to SoundDataSet
+    def test_model(self, syllable_collection):
+        if not isinstance(syllable_collection, SyllableCollection):
+            raise ValueError('Unsupported type <{0}> for syllable_collection. Expected SyllableCollection.'.format(type(syllable_collection)))
+
+        confusion = numpy.zeros((self.output_size, self.output_size))
+        for syl in syllable_collection:
+            scores = self.lstm(syl.spectrogram)
+            pred_label = self.score_to_label(scores)
+            true_index = self.label_index_dict[syl.label]
+            pred_index = self.label_index_dict[pred_label]
+            confusion[true_index, pred_index] += 1
+
+            match = pred_label == syl.label
+            if match and scores[syl_index] > self.best_syllables[syl.label][1]:
+                self.best_syllables[syl.label] = (syl, scores[syl_index])
