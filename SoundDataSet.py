@@ -90,27 +90,23 @@ class SoundDataSet(object):
     def create_training_and_test(self, fold=10):
         test_size = int(len(self.syllables)/fold)
         all_indices = range(self.n_syllables)
-        test_indices = random.choice(all_indices, size=test_size, replace=False)
+        test_indices = random.choice(all_indices,
+                                     size=test_size, replace=False)
         training_indices = list(set(all_indices).difference(test_indices))
-        test_samples = self.syllables[list(test_indices)]
-        training_samples = self.syllables[list(training_indices)]
-        return(training_samples, test_samples)
+        return(list(training_indices), list(test_indices))
 
-    def syllable_to_index(self):
-        syllable_index = {}
-        for i, each in enumerate(self.unique_syllables):
-            syllable_index[i] = each
-            syllable_index[each] = i
-        return(syllable_index)
 
 if __name__ == '__main__':
-    test = SoundDataSet('TestData')
-    test.load_syllables(save_file='TestData/test_set.pkl')
-    # r1 = Recording('TestData/CATH1.wav',
-    #                'TestData/CATH1.TextGrid', species='CATH')
-    # r1.get_annotations()
-    # print(r1.check_for_unique_syllables())
-    #r2 = Recording('TestData/CATH2.wav',
-    #                  'TestData/CATH2.TextGrid', species='CATH')
-    #r2.get_annotations()
-    #print(r2.check_for_unique_syllables())
+    all_syllables = SoundDataSet('Downloads/TestData')
+    all_syllables.add_wav_to_grid('Downloads/SMMJAN13TRK1.wav',
+                                  'Downloads/SMMJAN13TRK1.TextGrid')
+    all_syllables.add_wav_to_grid('Downloads/SMMJAN13TRK10.wav',
+                                  'Downloads/SMMJAN13TRK10.TextGrid')
+    all_syllables.add_wav_to_grid('Downloads/TRKa51-3-12.wav',
+                                  'Downloads/TRKa51a-3-12.TextGrid')
+    all_syllables.add_wav_to_grid('Downloads/TRKa51-3-12.wav',
+                                  'Downloads/TRKa51b-3-12.TextGrid')
+    all_syllables.add_wav_to_grid('Downloads/TRKb13-3-12.wav',
+                                  'Downloads/TRKb13a-3-12.TextGrid')
+    all_syllables.add_wav_to_grid('Downloads/TRKb13-3-12.wav',
+                                  'Downloads/TRKb13b-3-12.TextGrid')
