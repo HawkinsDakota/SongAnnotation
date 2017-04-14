@@ -83,9 +83,6 @@ class SoundDataSet(object):
         with open(save_file, 'wb') as output:
             pickle.dump(self, output, pickle.HIGHEST_PROTOCOL)
 
-    def load_dataset(self, read_file):
-        with open(read_file, 'rb') as pickle_input:
-            self = pickle.load(pickle_input)
 
     def create_training_and_test(self, fold=10):
         test_size = int(len(self.syllables)/fold)
@@ -95,6 +92,10 @@ class SoundDataSet(object):
         training_indices = list(set(all_indices).difference(test_indices))
         return(list(training_indices), list(test_indices))
 
+
+def load_dataset(read_file):
+    with open(read_file, 'rb') as pickle_input:
+        return(pickle.load(pickle_input))
 
 if __name__ == '__main__':
     all_syllables = SoundDataSet('Downloads/TestData')
