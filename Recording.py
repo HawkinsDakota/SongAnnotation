@@ -54,6 +54,9 @@ Total number of annotations: %i
             self.syllables.add_syllable(new_syllable)
             self.n_syllables += 1
 
+    def write_new_syllable():
+        return(0)
+
     def new_background(self, start, end):
         new_background = Syllable(start, end, self.sound_file,
                                   species = 'None', label = 'background')
@@ -87,7 +90,7 @@ Total number of annotations: %i
                 current_line += 4
             else:
                 current_line += 1
-
+        print('')  # print to go to new line after status bar completion 
         # with open(self.grid_file) as read_file:
         #     print('Parsing %s and %s' % (self.grid_file, self.sound_file))
         #     bar = ProgressBar(max_value=UnknownLength)
