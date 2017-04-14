@@ -40,9 +40,12 @@ class SyllableCollection(object):
     #
     def __getitem__(self, i):
         if isinstance(i, slice):
-            if i.stop >= len(self) and i.start >= len(self):
-                raise IndexError('The index (%d) is out of range' % i)
-            return([self[j] for j in range(*i.indices(len(self)))])
+            if i.stop >= len(self):
+                raise IndexError('The index {0} is out of range'.format(i.stop))
+            elif i.start >= len(self):
+                    raise IndexError('The index {0} is out of range'.format(i.start))
+            out_syllables = [self[j] for j in range(*i.indices(len(self)))]
+            return(SyllableCollection(out_syllables))
 
         elif isinstance(i, int):
             if i < 0:
@@ -50,6 +53,13 @@ class SyllableCollection(object):
             if i >= len(self):
                 raise IndexError('The index (%d) is out of range' % i)
             return(self.syllables[i])
+
+        elif isinstance(i, list):
+            if max(i) > len(self):
+                raise IndexError('Index {0} out of range.'.format(max(i)))
+            elif min(i) < 0:
+                raise IndexError('Negative indexing not supported.')
+            return(SyllableCollection([self[j] for j in i]))
 
         else:
             raise TypeError('Invalid argument type: %s.' % type(i))
