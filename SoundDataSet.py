@@ -98,7 +98,7 @@ def load_dataset(read_file):
         return(pickle.load(pickle_input))
 
 if __name__ == '__main__':
-    all_syllables = SoundDataSet('Downloads/TestData')
+    all_syllables = SoundDataSet('Downloads/', species='CATH')
     all_syllables.add_wav_to_grid('Downloads/SMMJAN13TRK1.wav',
                                   'Downloads/SMMJAN13TRK1.TextGrid')
     all_syllables.add_wav_to_grid('Downloads/SMMJAN13TRK10.wav',
@@ -111,3 +111,4 @@ if __name__ == '__main__':
                                   'Downloads/TRKb13a-3-12.TextGrid')
     all_syllables.add_wav_to_grid('Downloads/TRKb13-3-12.wav',
                                   'Downloads/TRKb13b-3-12.TextGrid')
+    all_syllables.load_syllables(save_file='all_songs.pkl')
