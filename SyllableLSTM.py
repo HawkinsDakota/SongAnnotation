@@ -53,7 +53,7 @@ class SyllableLSTM(object):
         self.lstm = LSTM(input_size=self.input_size,
                          output_size=self.output_size)
         self.loss_function = nn.NLLLoss()
-        self.optimizer = optim.SGD(self.lstm.parameters(), lr=0.1)
+        self.optimizer = optim.SGD(self.lstm.parameters(), lr=0.05)
 
     # Calculate most likely label given calculate score
     def score_to_label(self, syllable_score):
@@ -127,6 +127,7 @@ class SyllableLSTM(object):
             raise ValueError('Unsupported type <{0}> for syllable_collection. Expected SyllableCollection.'.format(type(syllable_collection)))
 
         iter_number = 0
+        last_epoch = time.time()
         for epoch in range(n_epochs):
             if track_time:
                 t0 = time.time()
@@ -134,7 +135,6 @@ class SyllableLSTM(object):
             print('{0}/{1} epochs...'.format(epoch + 1, n_epochs))
             syl_number = 0
             for each in syllable_collection:
-                print('Current syllable: ' + each.label)
                 # Prepare spectrogram and target tensors
                 target = self.prepare_label(each.label)
                 syllable_input = self.prepare_spectrogram(each.spectrogram)
@@ -169,7 +169,7 @@ class SyllableLSTM(object):
                 run_time = self.__format_time(time.time() - t0)
                 print('Epoch {0} run time: {1}'.format(epoch + 1, run_time))
             # Save current model after each epoch
-            save_bool = epoch % 10 == 0 or epoch == n_epochs - 1
+            save_bool = time.time() - last_epoch > 60**2 or epoch == n_epochs - 1
             if save_file is not None and save_bool:
                 print('Saving model after epoch {0}.'.format(epoch + 1))
                 self.save_model(save_file)
@@ -218,14 +218,17 @@ if __name__ == '__main__':
         new_model.init_hidden()
         output.append(new_model(each))
 
-    r1 = Recording('Downloads/CATH2.wav', 'Downloads/CATH2.TextGrid',
-                   species='CATH')
-    r1.get_annotations()
-    syllable_lstm = SyllableLSTM(128, r1.unique_syllable_labels())
-    syllable_lstm.train_model(r1.syllables,
+    test_dataset = SoundDataSet('TestData', species='CATH')
+    test_dataset.load_syllables('test_dataset.pkl')
+    training, test = test_dataset.create_training_and_test(fold=10)
+    training_syllables = [test_dataset.syllables[int(i)] for i in training]
+    test_syllables = [test_dataset.syllables[int(i)] for i in test]
+
+    syllable_lstm = SyllableLSTM(128, test_dataset.unique_syllables)
+    syllable_lstm.train_model(SyllableCollection(training_syllables),
                               n_epochs=1,
                               save_file='test_model.pkl',
                               loss_file='test_loss.csv',
                               track_time=True)
-    c_matrix = syllable_lstm.test_model(r1.syllables)
+    c_matrix = syllable_lstm.test_model(SyllableCollection(test_syllables))
     c_matrix.to_csv('cmatrix.csv')
