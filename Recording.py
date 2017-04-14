@@ -22,6 +22,13 @@ class Recording(object):
         self.num_songs = 0
         self.background = []
         self.num_background = 0
+        self.__syllable_dictionary = self.__load_dictionary('syllable_dictionary.csv')
+
+
+    def __load_dictionary(self, dictionary_file):
+        with open(dictionary_file) as f:
+            lines = f.readlines()
+        return([x.strip().split(',')[0] for x in lines])
 
     def __str__(self):
         out = '''
@@ -72,7 +79,7 @@ Total number of annotations: %i
         read_file.close()
         n_lines = len(lines)
         current_line = 0
-        bar = ProgressBar(max_value=len(lines))
+        bar = ProgressBar(max_value=n_lines)
         while current_line < n_lines:
             bar.update(current_line + 1)
             line = lines[current_line]
@@ -84,13 +91,13 @@ Total number of annotations: %i
                 end = float(end_line.split('=')[1])
                 label = re.sub(r'^"|"$', '',
                                label_line.split('=')[1].strip())
-                if label != '':
+                if label in self.__syllable_dictionary:
                     label = self.species + '_' + label
                     self.new_syllable(start, end, label)
                 current_line += 4
             else:
                 current_line += 1
-        print('')  # print to go to new line after status bar completion 
+        bar.update(n_lines)  # print to go to new line after status bar completion
         # with open(self.grid_file) as read_file:
         #     print('Parsing %s and %s' % (self.grid_file, self.sound_file))
         #     bar = ProgressBar(max_value=UnknownLength)
