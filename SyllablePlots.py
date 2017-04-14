@@ -39,6 +39,7 @@ def plot_syllable_distribution(syllables, save_file=None, plot_file=None):
     plt.autoscale(tight=True)
 
     plt.sca(ax2)
+    ax2.set_xlim([0, max(df['Count'].values)])
     plt.ylabel('Cumulative Percentage')
     plt.suptitle('Syllable Count Distribution')
 
