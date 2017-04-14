@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 class SoundObject(object):
 
-    def __init__(self, start, end, sound_file,
-      preprocess = True, fmin = 0, fmax = None):
+    def __init__(self, start, end, sound_file=None,
+                 preprocess = True, fmin = 0, fmax = None):
         self.__check_inputs(start, end, sound_file)
         # provided instance variables
         self.start = start
@@ -17,11 +17,13 @@ class SoundObject(object):
         self.fmin = fmin
         self.fmax = fmax
         # calculated instance variables
-        self.sound, self.sample_rate = self.__get_sound_array(preprocess)
-        if preprocess:
-            self.__preprocess_sound()
-        self.bin_size = int(self.sample_rate*0.001)  # bin sound into 1 ms windows
-        self.spectrogram = self.__generate_spectrogram()
+        if sound_file is not None:
+            self.sound, self.sample_rate = self.__get_sound_array(preprocess)
+            if preprocess:
+                self.__preprocess_sound()
+            # bin sound into 1 ms windows
+            self.bin_size = int(self.sample_rate*0.001)
+            self.spectrogram = self.__generate_spectrogram()
 
     def __str__(self):
         out = '''
@@ -43,7 +45,7 @@ class SoundObject(object):
         if type(end) != int and type(end) != float:
             raise IOError('Expected numeric value for end time.')
 
-        if type(sound_file) != str:
+        if type(sound_file) != str and sound_file is not None:
             raise IOError('Expected file path for <sound_file>.')
 
     def __get_sound_array(self, preprocess):
