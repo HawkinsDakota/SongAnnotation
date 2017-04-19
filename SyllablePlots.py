@@ -64,7 +64,7 @@ def plot_confusion(confusion, plot_file=None):
     plt.yticks(rotation='horizontal')
     plt.tick_params(axis='both', which='both', labelsize=8)
     if plot_file is not None:
-        plt.savefig(heat)
+        plt.savefig(plot_file)
     else:
         plt.show()
     plt.close()
