@@ -36,9 +36,10 @@ class LSTM(nn.Module):
         scores = self.softmax(self.hidden[0])
         return(scores)
 
+
 class SyllableLSTM(object):
 
-    def __init__(self, input_size, possible_labels):
+    def __init__(self, input_size, possible_labels, weights=None):
         # input dim should be the number of mels in a syllable slice
         self.input_size = input_size
         # output dim will be the number of possible labels
@@ -52,7 +53,10 @@ class SyllableLSTM(object):
         # hidden size will be output_size // possible input + output later
         self.lstm = LSTM(input_size=self.input_size,
                          output_size=self.output_size)
-        self.loss_function = nn.NLLLoss()
+        if weights is None:
+            weights = [1/self.output_size]*self.output_size
+            weights = torch.Tensor(weights)
+        self.loss_function = nn.NLLLoss(weight=weights)
         self.optimizer = optim.SGD(self.lstm.parameters(), lr=0.05)
 
     # Calculate most likely label given calculate score
@@ -180,17 +184,24 @@ class SyllableLSTM(object):
 
         confusion = numpy.zeros((self.output_size, self.output_size),
                                 dtype=int)
+        actual = []
+        predicted = []
         for syl in syllable_collection:
             scores = self.lstm(self.prepare_spectrogram(syl.spectrogram))
             pred_label = self.score_to_label(scores)
             true_index = self.label_index_dict[syl.label]
             pred_index = self.label_index_dict[pred_label]
             confusion[true_index, pred_index] += 1
-
             match = pred_label == syl.label
+            actual.append(syl.label)
+            predicted.append(pred_label)
             if match and scores.data[0][true_index] > self.best_syllables[syl.label][1]:
                 self.best_syllables[syl.label] = (syl, scores[true_index])
         labels = [self.label_index_dict[i] for i in range(confusion.shape[0])]
+        a_series = Series(actual, index = range(len(actual)))
+        p_series = Series(predicted, index = range(len(predicted)))
+        data = {'Actual': a_series, 'Predicted': p_series}
+        DataFrame(data).to_csv('predictions.csv')
         return(DataFrame(confusion, columns=labels, index=labels))
 
 if __name__ == '__main__':
