@@ -187,6 +187,7 @@ class SyllableLSTM(object):
         actual = []
         predicted = []
         for syl in syllable_collection:
+            self.lstm.init_hidden()
             scores = self.lstm(self.prepare_spectrogram(syl.spectrogram))
             pred_label = self.score_to_label(scores)
             true_index = self.label_index_dict[syl.label]
@@ -198,8 +199,8 @@ class SyllableLSTM(object):
             if match and scores.data[0][true_index] > self.best_syllables[syl.label][1]:
                 self.best_syllables[syl.label] = (syl, scores[true_index])
         labels = [self.label_index_dict[i] for i in range(confusion.shape[0])]
-        a_series = Series(actual, index = range(len(actual)))
-        p_series = Series(predicted, index = range(len(predicted)))
+        a_series = Series(actual, index=range(len(actual)))
+        p_series = Series(predicted, index=range(len(predicted)))
         data = {'Actual': a_series, 'Predicted': p_series}
         DataFrame(data).to_csv('predictions.csv')
         return(DataFrame(confusion, columns=labels, index=labels))
