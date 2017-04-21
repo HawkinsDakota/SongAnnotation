@@ -13,33 +13,35 @@ from SyllableCollection import SyllableCollection
 import time
 
 from pandas import DataFrame
+from pandas import Series
 
 class LSTM(nn.Module):
 
-    def __init__(self, input_size, output_size):
+    def __init__(self, input_size, output_size, num_layers):
 
         super(LSTM, self).__init__()
         self.hidden_size = output_size
+        self.num_layers = num_layers
         self.hidden = self.init_hidden()
-        self.lstm = nn.LSTMCell(input_size, output_size)
-        self.softmax = nn.LogSoftmax()
-
+        self.lstm = nn.LSTM(input_size=input_size,
+                            hidden_size=output_size)
+        self.softmax = nn.Softmax()
 
     def init_hidden(self):
-        zero_tensor = torch.zeros(1, self.hidden_size)
-        return(autograd.Variable(zero_tensor), autograd.Variable(zero_tensor))
+        hidden_tensor = torch.zeros(self.num_layers, 1, self.hidden_size)
+        cell_tensor = torch.zeros(self.num_layers, 1, self.hidden_size)
+        return(autograd.Variable(hidden_tensor), autograd.Variable(cell_tensor))
 
 
     def forward(self, net_input):
-        for i in range(net_input.size()[0]):
-            self.hidden = self.lstm(net_input[i], self.hidden)
-        scores = self.softmax(self.hidden[0])
+        self.out, self.hidden = self.lstm(net_input, self.hidden)
+        scores = self.softmax(torch.squeeze(self.hidden[0], 1))
         return(scores)
 
 
 class SyllableLSTM(object):
 
-    def __init__(self, input_size, possible_labels, weights=None):
+    def __init__(self, input_size, possible_labels, num_layers, weights=None):
         # input dim should be the number of mels in a syllable slice
         self.input_size = input_size
         # output dim will be the number of possible labels
@@ -52,7 +54,8 @@ class SyllableLSTM(object):
         self.best_syllables = {each: (empty_syl, 0) for each in self.labels}
         # hidden size will be output_size // possible input + output later
         self.lstm = LSTM(input_size=self.input_size,
-                         output_size=self.output_size)
+                         output_size=self.output_size,
+                         num_layers=num_layers)
         if weights is None:
             weights = [1/self.output_size]*self.output_size
             weights = torch.Tensor(weights)
@@ -61,7 +64,7 @@ class SyllableLSTM(object):
 
     # Calculate most likely label given calculate score
     def score_to_label(self, syllable_score):
-        syl_index = numpy.argmax(syllable_score.data.numpy())
+        syl_index = numpy.argmax(syllable_score.data.numpy()[0])
         return(self.label_index_dict[syl_index])
 
     # Predict class of syllable spectrogram
@@ -150,7 +153,7 @@ class SyllableLSTM(object):
                 self.lstm.hidden = self.lstm.init_hidden()
                 # go through forward step, receive scores
                 label_scores = self.lstm(syllable_input)
-                if syl_number % 500 == 0:
+                if syl_number % 1000 == 0:
                     pred_label = self.score_to_label(label_scores)
                     print('Expected: {0} | Predicted: {1}'.format(
                           each.label, pred_label))
