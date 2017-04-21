@@ -111,4 +111,4 @@ if __name__ == '__main__':
                                   'Downloads/TRKb13a-3-12.TextGrid')
     all_syllables.add_wav_to_grid('Downloads/TRKb13-3-12.wav',
                                   'Downloads/TRKb13b-3-12.TextGrid')
-    all_syllables.load_syllables(save_file='all_songs.pkl')
+    all_syllables.save_dataset(save_file='all_songs.pkl')
