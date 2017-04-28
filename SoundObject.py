@@ -2,6 +2,7 @@ import librosa  #sound and music editing package
 import librosa.display
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import signal
 
 
 class SoundObject(object):
@@ -23,7 +24,7 @@ class SoundObject(object):
                 self.__preprocess_sound()
             # bin sound into 1 ms windows
             self.bin_size = int(self.sample_rate*0.001)
-            self.spectrogram = self.__generate_spectrogram()
+            self.spectrogram = self.__mel_spectrogram()
 
     def __str__(self):
         out = '''
@@ -64,16 +65,30 @@ class SoundObject(object):
                                     filter_coefficient * self.sound[:-1])
         self.sound = pre_emph_signal
 
-    def __generate_spectrogram(self):
+    def __mel_spectrogram(self):
 
         mel_spec = librosa.feature.melspectrogram(self.sound,
                                                   sr=self.sample_rate,
                                                   hop_length=self.bin_size,
-                                                  n_mels=128,
+                                                  n_mels=256,
                                                   fmin=self.fmin,
                                                   fmax=self.fmax)
         log_mel_spec = librosa.logamplitude(mel_spec, ref_power=np.max)
         return(log_mel_spec)
+
+    def plot(self):
+        Pxx, freqs, bins, im = plt.specgram(self.sound,
+                                            NFFT=256,
+                                            Fs=self.sample_rate)
+        plt.show()
+
+        # decibel = librosa.amplitude_to_db(self.sound, ref=max)
+        # spectrum, freqs, t, im = signal.spectrogram(decibel,
+        #                                        fs=self.sample_rate)
+        # plt.pcolormesh(t, f, spectrogram, cmap='viridis')
+        # plt.ylabel('Frequency [Hz]')
+        # plt.xlabel('Time [sec]')
+        # plt.show()
 
     def plot_spectrogram(self, show=False):
         #  time_breaks = np.array([0]*self.spectrogram.shape[1])
@@ -101,19 +116,20 @@ if __name__ == '__main__':
                        sound_file='Downloads/CATH1.WAV',
                        preprocess=True)
     test.plot_spectrogram(True)
-
-    process_test = SoundObject(start=11.844455261385376,
-                               end=12.081455063757392,
-                               sound_file='Downloads/CATH1.WAV',
-                               preprocess=False)
+    #test.plot()
+    #
+    # process_test = SoundObject(start=11.844455261385376,
+    #                            end=12.081455063757392,
+    #                            sound_file='Downloads/CATH1.WAV',
+    #                            preprocess=False)
     #print(test == process_test)
 
-    big_test = SoundObject(start = 13,
-                           end = 20,
-                           sound_file = 'Downloads/CATH1.WAV',
-                           preprocess = True,
-                           fmin = 1000,
-                           fmax = 10000)
+    # big_test = SoundObject(start = 13,
+    #                        end = 20,
+    #                        sound_file = 'Downloads/CATH1.WAV',
+    #                        preprocess = True,
+    #                        fmin = 1000,
+    #                        fmax = 10000)
     #print(test == big_test)
     #
     # big_test_preprocess = SoundObject(start = 13,
