@@ -1,5 +1,6 @@
 from SoundObject import SoundObject
 import matplotlib.pyplot as plt
+import numpy
 
 class Syllable(SoundObject):
     """ Class to represent syllable instances in bird songs.
@@ -55,7 +56,7 @@ class Syllable(SoundObject):
         species_eq = self.species == other.species
         return(all([label_eq, species_eq, super(Syllable, self).__eq__(other)]))
 
-    def plot_spectrogram(self, show=True):
+    def plot(self, show=True):
         """ Plot the spectrogram of the Syllable.
 
         Plots the spectrogram associated with each Syllable instance. Inherrited
@@ -75,12 +76,14 @@ class Syllable(SoundObject):
         if show:
             plt.show()
 
+
+
 if __name__ == '__main__':
-    test = Syllable(start = 11.844455261385376,
-                    end = 12.081455063757392,
-                    sound_file = 'Downloads/CATH1.WAV',
-                    species = 'CATH',
-                    label = 'CATH_yea')
+    test = Syllable(start=11.844455261385376,
+                    end=12.081455063757392,
+                    sound_file='Downloads/CATH1.WAV',
+                    species='CATH',
+                    label='CATH_yea')
 
     print(test)
     print(isinstance(test, Syllable))
