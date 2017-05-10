@@ -1,9 +1,10 @@
-import librosa  # sound and music editing package
+"""SoundObject file."""
+
+import librosa
 import librosa.display
 import numpy as np
 import matplotlib.pyplot as plt
 from seaborn import distplot
-from scipy import signal
 from skimage import feature, filters, measure
 from copy import deepcopy
 
@@ -26,8 +27,8 @@ class SoundObject(object):
             if preprocess:
                 self.__preprocess_sound()
             # bin sound into 1 ms windows
-            self.bin_size = int(self.sample_rate*0.001)
-            self.spectrogram = self.__mel_spectrogram()
+            self.bin_size = int(self.sample_rate * 0.001)
+            self.spectrogram = self.mel_spectrogram()
 
     def __str__(self):
         out = '''
@@ -83,8 +84,8 @@ class SoundObject(object):
                                     filter_coefficient * self.sound[:-1])
         self.sound = pre_emph_signal
 
-    def __mel_spectrogram(self):
-
+    def mel_spectrogram(self):
+        """Generate a logged-mel spectrogram."""
         mel_spec = librosa.feature.melspectrogram(self.sound,
                                                   sr=self.sample_rate,
                                                   hop_length=self.bin_size,
@@ -108,7 +109,7 @@ class SoundObject(object):
             None
         """
         self.sound, self.sample_rate = self.get_sound_array()
-        self.bin_size = int(self.sample_rate*0.001)
+        self.bin_size = int(self.sample_rate * 0.001)
         if self.preprocess:
             self.__preprocess_sound()
         self.spectrogram = self.__mel_spectrogram()
@@ -137,6 +138,26 @@ class SoundObject(object):
                                     fmin=self.fmin,
                                     fmax=self.fmax)
         return(shifted_sound)
+
+    def frequency_shift(self, shift):
+        """
+        Frequency shift the sound within `SoundObject`.
+
+        Args:
+            shift (float): number of fractional half-steps to shift `SoundObject.sound`.
+                Negative value denotes a decrease in frequency, while a positive value
+                indicates an increase in frequency. See librosa.effects.pitch_shift for
+                more information.
+
+        Returns:
+            `SoundOjbect`: a frequency-shifted `SoundOjbect`.
+        """
+        new_sound_object = self.copy()
+        new_sound_object.sound = librosa.effects.pitch_shift(self.sound,
+                                                             self.sample_rate,
+                                                             shift)
+        new_sound_object.spectrogram = new_sound_object.mel_spectrogram()
+        return(new_sound_object)
 
     def canny(self, sigma=1):
         """
@@ -223,8 +244,8 @@ class SoundObject(object):
             (:numpy.ndarray:) filtered `SoundObject` spectrogram.
         """
         adj_matrix = self.spectrogram
-        adj_matrix[adj_matrix < 2] = 0
-        adj_matrix[adj_matrix >= 2] = 1
+        adj_matrix[adj_matrix < threshold] = 0
+        adj_matrix[adj_matrix >= threshold] = 1
         return(adj_matrix)
 
     def contours(self, start_value=2, end_value=None, step=0.1):
@@ -260,7 +281,7 @@ class SoundObject(object):
         for value in iter_values:
             contours = measure.find_contours(test.spectrogram, value)
             if len(contours) > 0:
-                for i, contour in enumerate(contours):
+                for contour in contours:
                     row_idx = [int(each) for each in contour[:, 0]]
                     col_idx = [int(each) for each in contour[:, 1]]
                     contour_matrix[row_idx, col_idx] = 1
@@ -331,15 +352,11 @@ if __name__ == '__main__':
                        fmin=500,
                        fmax=11000)
     test.normalize()
-    test1 = test.copy()
-    test2 = test.copy()
-    test_contours = test1.contours()
-    test1.spectrogram = test_contours
-    test2.spectrogram = test2.binary_mask()
-
     test.plot(True)
-    test1.plot(True, 'Greys')
-    test2.plot(True, 'Greys')
+    freq_shift = test.frequency_shift(-5)
+    freq_shift.plot(True)
+    freq_shift_2 = test.frequency_shift(5)
+    freq_shift_2.plot(True)
     #
     # process_test = SoundObject(start=11.844455261385376,
     #                            end=12.081455063757392,
