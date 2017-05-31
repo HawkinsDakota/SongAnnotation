@@ -9,6 +9,12 @@ from skimage import feature, filters, measure
 from copy import deepcopy
 
 
+def normalize_spectrogram(spectrogram):
+    """Z normalize a `SoundObject` spectrogram."""
+    spec_avg = np.mean(spectrogram)
+    spec_dev = np.std(spectrogram)
+    return((spectrogram - spec_avg)/spec_dev)
+
 class SoundObject(object):
 
     def __init__(self, start=None, end=None, sound_file=None,
@@ -174,9 +180,7 @@ class SoundObject(object):
 
     def normalize(self):
         """Z normalize a `SoundObject` spectrogram."""
-        spec_avg = np.mean(self.spectrogram)
-        spec_dev = np.std(self.spectrogram)
-        self.spectrogram = (self.spectrogram - spec_avg)/spec_dev
+        self.spectrogram = normalize_spectrogram(self.spectrogram)
 
     def scale(self, smin=0, smax=1):
         """
