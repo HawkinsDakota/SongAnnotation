@@ -1,6 +1,17 @@
-from SoundObject import SoundObject
+from os import path
 import matplotlib.pyplot as plt
 import numpy
+from SoundObject import SoundObject
+
+def format_time(time_in_seconds):
+    """Convert seconds to xh:ym:zs format."""
+    seconds = time_in_seconds
+    hours = int(time_in_seconds/60**2)
+    minutes = int((time_in_seconds - hours*60**2)/60)
+    if (hours*60**2 + minutes*60) > 0:
+        seconds = int(time_in_seconds) % (hours*60**2 + minutes*60)
+    return('{}h:{}m:{:.2f}s'.format(hours, minutes, seconds))
+
 
 class Syllable(SoundObject):
     """ Class to represent syllable instances in bird songs.
@@ -56,6 +67,24 @@ class Syllable(SoundObject):
         species_eq = self.species == other.species
         return(all([label_eq, species_eq, super(Syllable, self).__eq__(other)]))
 
+    def generate_id(self):
+        """
+        Generate unique id for syllable.
+
+        Generates unique id for a syllable with the following format:
+            {sound_file}_{species}_{label}_{start}-{stop}
+
+        Args:
+            syllable (Syllable): Syl
+        """
+        sound_file = path.basename(self.  ound_file)
+        syl_id = "{0}_{1}-{2}_{3}_{4}".format(sound_file,
+                                              self.species,
+                                              self.label,
+                                              format_time(self.start),
+                                              format_time(self.end))
+        return(syl_id)
+
     def plot(self, show=True):
         """ Plot the spectrogram of the Syllable.
 
@@ -83,8 +112,6 @@ if __name__ == '__main__':
                     end=12.081455063757392,
                     sound_file='Downloads/CATH1.WAV',
                     species='CATH',
-                    label='CATH_yea')
+                    label='yea')
 
-    print(test)
-    print(isinstance(test, Syllable))
-    test.plot_spectrogram(True)
+    print(test.generate_id())
